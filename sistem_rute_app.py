@@ -196,8 +196,8 @@ start_labels = [s.strip() for s in start_input.split(',') if s.strip() in label_
 end_labels = st.sidebar.multiselect("End Nodes (Ruko/Gedung)", ruko_gedung_labels, default=ruko_gedung_labels[:1])
 
 priorities = st.sidebar.text_input("Prioritas (dipisah koma)", "1,2")
-demands = st.sidebar.text_input("Permintaan (dipisah koma)", "10,20")
-capacities = st.sidebar.text_input("Kapasitas Kendaraan (dipisah koma)", "30,30")
+demands = st.sidebar.text_input("Berat Pengiriman (Kg) (dipisah koma)", "10,20")
+capacities = st.sidebar.text_input("Kapasitas Kendaraan (Kg) (dipisah koma)", "30,30")
 algorithm = st.sidebar.selectbox("Algoritma", ['dijkstra', 'a_star'])
 
 # --- Konversi Input ---
