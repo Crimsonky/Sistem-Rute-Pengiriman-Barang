@@ -120,15 +120,7 @@ def dijkstra(graph, start, end):
 #                 heapq.heappush(open_set, (f[neighbor], neighbor))
 #     return None, float('inf')
 
- def heuristic_distance(n1, n2):
-     try:
-         from math import radians
-         from sklearn.metrics.pairwise import haversine_distances
-         lat1, lon1 = radians(G.nodes[n1]['latitude']), radians(G.nodes[n1]['longitude'])
-         lat2, lon2 = radians(G.nodes[n2]['latitude']), radians(G.nodes[n2]['longitude'])
-         return haversine_distances([[lat1, lon1], [lat2, lon2]])[0, 1] * 6371
-     except:
-         return 0
+
 
 def a_star(graph, start, end, heuristic):
     open_set = [(0, start)]
@@ -160,6 +152,16 @@ def a_star(graph, start, end, heuristic):
                     heapq.heappush(open_set, (f_score[neighbor], neighbor))
 
     return None, float('inf')
+
+def heuristic_distance(n1, n2):
+    try:
+        from math import radians
+        from sklearn.metrics.pairwise import haversine_distances
+        lat1, lon1 = radians(G.nodes[n1]['latitude']), radians(G.nodes[n1]['longitude'])
+        lat2, lon2 = radians(G.nodes[n2]['latitude']), radians(G.nodes[n2]['longitude'])
+        return haversine_distances([[lat1, lon1], [lat2, lon2]])[0, 1] * 6371
+    except:
+        return 0
 
 # def heuristic_distance(n1, n2):
 #   try:
