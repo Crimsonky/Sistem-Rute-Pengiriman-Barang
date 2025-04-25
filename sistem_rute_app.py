@@ -1,6 +1,6 @@
-pip install networkx
-pip install folium
-pip install streamlit_folium
+pip! install networkx
+pip! install folium
+pip! install streamlit_folium
 import streamlit as st
 import pandas as pd
 import networkx as nx
