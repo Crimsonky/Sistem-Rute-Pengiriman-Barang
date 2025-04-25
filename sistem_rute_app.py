@@ -93,65 +93,65 @@ def dijkstra(graph, start, end):
 
     return None, float('inf')
 
-# def a_star(graph, start, end, heuristic):
-#     open_set = [(0, start)]
-#     came_from = {}
-#     g = {n: float('inf') for n in graph.nodes}
-#     f = {n: float('inf') for n in graph.nodes}
-#     g[start] = 0
-#     f[start] = heuristic(start, end)
-
-#     while open_set:
-#         _, node = heapq.heappop(open_set)
-#         if node == end:
-#             path = []
-#             while node in came_from:
-#                 path.append(node)
-#                 node = came_from[node]
-#             path.append(start)
-#             return list(reversed(path)), g[end]
-
-#         for neighbor in graph.neighbors(node):
-#             tentative_g = g[node] + graph[node][neighbor]['weight']
-#             if tentative_g < g[neighbor]:
-#                 came_from[neighbor] = node
-#                 g[neighbor] = tentative_g
-#                 f[neighbor] = tentative_g + heuristic(neighbor, end)
-#                 heapq.heappush(open_set, (f[neighbor], neighbor))
-#     return None, float('inf')
-
-
-
 def a_star(graph, start, end, heuristic):
     open_set = [(0, start)]
     came_from = {}
-    g_score = {n: float('inf') for n in graph.nodes}
-    g_score[start] = 0
-    f_score = {n: float('inf') for n in graph.nodes}
-    f_score[start] = heuristic(start, end)
+    g = {n: float('inf') for n in graph.nodes}
+    f = {n: float('inf') for n in graph.nodes}
+    g[start] = 0
+    f[start] = heuristic(start, end)
 
     while open_set:
-        current_node = heapq.heappop(open_set)
-
-        if current_node == end:
+        _, node = heapq.heappop(open_set)
+        if node == end:
             path = []
-            while current_node in came_from:
-                path.append(current_node)
-                current_node = came_from[current_node]
+            while node in came_from:
+                path.append(node)
+                node = came_from[node]
             path.append(start)
-            path.reverse()
-            return path, g_score[end]
+            return list(reversed(path)), g[end]
 
-        for neighbor in graph.neighbors(current_node):
-            tentative_g_score = g_score[current_node] + graph[current_node][neighbor]['weight']
-            if tentative_g_score < g_score[neighbor]:
-                came_from[neighbor] = current_node
-                g_score[neighbor] = tentative_g_score
-                f_score[neighbor] = tentative_g_score + heuristic(neighbor, end)
-                if (f_score[neighbor], neighbor) not in open_set:
-                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
-
+        for neighbor in graph.neighbors(node):
+            tentative_g = g[node] + graph[node][neighbor]['weight']
+            if tentative_g < g[neighbor]:
+                came_from[neighbor] = node
+                g[neighbor] = tentative_g
+                f[neighbor] = tentative_g + heuristic(neighbor, end)
+                heapq.heappush(open_set, (f[neighbor], neighbor))
     return None, float('inf')
+
+
+
+# def a_star(graph, start, end, heuristic):
+#     open_set = [(0, start)]
+#     came_from = {}
+#     g_score = {n: float('inf') for n in graph.nodes}
+#     g_score[start] = 0
+#     f_score = {n: float('inf') for n in graph.nodes}
+#     f_score[start] = heuristic(start, end)
+
+#     while open_set:
+#         current_node = heapq.heappop(open_set)
+
+#         if current_node == end:
+#             path = []
+#             while current_node in came_from:
+#                 path.append(current_node)
+#                 current_node = came_from[current_node]
+#             path.append(start)
+#             path.reverse()
+#             return path, g_score[end]
+
+#         for neighbor in graph.neighbors(current_node):
+#             tentative_g_score = g_score[current_node] + graph[current_node][neighbor]['weight']
+#             if tentative_g_score < g_score[neighbor]:
+#                 came_from[neighbor] = current_node
+#                 g_score[neighbor] = tentative_g_score
+#                 f_score[neighbor] = tentative_g_score + heuristic(neighbor, end)
+#                 if (f_score[neighbor], neighbor) not in open_set:
+#                     heapq.heappush(open_set, (f_score[neighbor], neighbor))
+
+#     return None, float('inf')
 
 def heuristic_distance(n1, n2):
     try:
