@@ -120,15 +120,15 @@ def dijkstra(graph, start, end):
 #                 heapq.heappush(open_set, (f[neighbor], neighbor))
 #     return None, float('inf')
 
-# def heuristic_distance(n1, n2):
-#     try:
-#         from math import radians
-#         from sklearn.metrics.pairwise import haversine_distances
-#         lat1, lon1 = radians(G.nodes[n1]['latitude']), radians(G.nodes[n1]['longitude'])
-#         lat2, lon2 = radians(G.nodes[n2]['latitude']), radians(G.nodes[n2]['longitude'])
-#         return haversine_distances([[lat1, lon1], [lat2, lon2]])[0, 1] * 6371
-#     except:
-#         return 0
+ def heuristic_distance(n1, n2):
+     try:
+         from math import radians
+         from sklearn.metrics.pairwise import haversine_distances
+         lat1, lon1 = radians(G.nodes[n1]['latitude']), radians(G.nodes[n1]['longitude'])
+         lat2, lon2 = radians(G.nodes[n2]['latitude']), radians(G.nodes[n2]['longitude'])
+         return haversine_distances([[lat1, lon1], [lat2, lon2]])[0, 1] * 6371
+     except:
+         return 0
 
 def a_star(graph, start, end, heuristic):
     open_set = [(0, start)]
@@ -161,21 +161,21 @@ def a_star(graph, start, end, heuristic):
 
     return None, float('inf')
 
-def heuristic_distance(n1, n2):
-  try:
-      node1 = G.nodes[n1]
-      node2 = G.nodes[n2]
-      if pd.notna(node1['latitude']) and pd.notna(node1['longitude']) and pd.notna(node2['latitude']) and pd.notna(node2['longitude']):
-          from sklearn.metrics.pairwise import haversine_distances
-          from math import radians
-          node1_loc = (radians(node1['latitude']), radians(node1['longitude']))
-          node2_loc = (radians(node2['latitude']), radians(node2['longitude']))
+# def heuristic_distance(n1, n2):
+#   try:
+#       node1 = G.nodes[n1]
+#       node2 = G.nodes[n2]
+#       if pd.notna(node1['latitude']) and pd.notna(node1['longitude']) and pd.notna(node2['latitude']) and pd.notna(node2['longitude']):
+#           from sklearn.metrics.pairwise import haversine_distances
+#           from math import radians
+#           node1_loc = (radians(node1['latitude']), radians(node1['longitude']))
+#           node2_loc = (radians(node2['latitude']), radians(node2['longitude']))
 
-          return haversine_distances([node1_loc, node2_loc])[0,1] * 6371
-      else:
-          return 0
-  except KeyError:
-        return 0
+#           return haversine_distances([node1_loc, node2_loc])[0,1] * 6371
+#       else:
+#           return 0
+#   except KeyError:
+#         return 0
       
 # ===== Streamlit UI =====
 st.set_page_config(layout="wide")
