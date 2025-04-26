@@ -55,10 +55,6 @@ Proyek ini adalah aplikasi berbasis
 - `streamlit-folium`
 - `scikit-learn`
 
-## ✨ Rencana Pengembangan
-- Integrasi **penjadwalan waktu** berdasarkan jam operasional.
-- Visualisasi Rute.
-
 ## 🧑‍💻 Kontributor
 - Ryan Delon Pratama
 - Ferry Saputra
