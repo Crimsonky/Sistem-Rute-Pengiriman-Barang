@@ -39,7 +39,7 @@ Proyek ini adalah aplikasi berbasis
    ```
 
 ## 🌐 Link Aplikasi Streamlit untuk Pengujian
-- [Klik di sini untuk mengakses aplikasi Streamlit yang sudah berjalan](https://sistem-rute-kelompok-5.streamlit.app/)
+- [Klik di sini Streamlit](https://sistem-rute-kelompok-5.streamlit.app/)
 
 
 ## 🛠️ Struktur File
