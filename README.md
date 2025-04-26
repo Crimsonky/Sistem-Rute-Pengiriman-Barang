@@ -63,7 +63,7 @@ Proyek ini adalah aplikasi berbasis
 ## 🧑‍💻 Kontributor Kelompok 5
 - Ryan Delon Pratama
 - Ferry Saputra
-- Rafael Aryapati Soebagijo
+- Rafael Aryapati S.
 - Atong Nazarius
 - Rifky Mustaqim Handoko
 - Ahmad Iqbal
