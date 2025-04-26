@@ -2,13 +2,16 @@ import streamlit as st
 import pandas as pd
 import networkx as nx
 import folium
-from folium import Marker, PolyLine
+from folium import Marker
 from streamlit_folium import st_folium
 import heapq
+import time
+import tracemalloc
+import matplotlib.pyplot as plt
 
 # ===== Load Data =====
 nodes_df = pd.read_csv('transportation_nodes.csv')
-edges_df = pd.read_csv('transportation_edges_augmented.csv')
+edges_df = pd.read_csv('transportation_edges_updated.csv')
 
 G = nx.DiGraph()
 id_to_label = {}
@@ -29,23 +32,20 @@ def parse_congestion(cong):
 
     s = str(cong).strip().lower()
     mapping = {
-        'Rendah':  0.2,
-        'Sedang':  0.5,
-        'Tinggi':  0.8
+        'rendah': 1,
+        'sedang': 2,
+        'tinggi': 3
     }
     return mapping.get(s, 1.0)
 
 def compute_weight(distance_km, avg_speed_kmh, congestion, direction):
     speed = avg_speed_kmh if avg_speed_kmh and avg_speed_kmh > 0 else 1.0
-
     cong_val = parse_congestion(congestion)
-
     time_hours = distance_km / speed
     cong_factor = 1 + cong_val
     dir_factor = 1.5 if direction == 1 else 1.0
-
     return time_hours * cong_factor * dir_factor
-    
+
 for _, row in edges_df.iterrows():
     weight = compute_weight(
         distance_km=row['distance_km'],
@@ -61,7 +61,6 @@ for _, row in edges_df.iterrows():
         **row.to_dict()
     )
 
-# ===== Algoritma =====
 def dijkstra(graph, start, end):
     distances = {n: float('inf') for n in graph.nodes}
     distances[start] = 0
@@ -120,39 +119,6 @@ def a_star(graph, start, end, heuristic):
                 heapq.heappush(open_set, (f[neighbor], neighbor))
     return None, float('inf')
 
-
-
-# def a_star(graph, start, end, heuristic):
-#     open_set = [(0, start)]
-#     came_from = {}
-#     g_score = {n: float('inf') for n in graph.nodes}
-#     g_score[start] = 0
-#     f_score = {n: float('inf') for n in graph.nodes}
-#     f_score[start] = heuristic(start, end)
-
-#     while open_set:
-#         current_node = heapq.heappop(open_set)
-
-#         if current_node == end:
-#             path = []
-#             while current_node in came_from:
-#                 path.append(current_node)
-#                 current_node = came_from[current_node]
-#             path.append(start)
-#             path.reverse()
-#             return path, g_score[end]
-
-#         for neighbor in graph.neighbors(current_node):
-#             tentative_g_score = g_score[current_node] + graph[current_node][neighbor]['weight']
-#             if tentative_g_score < g_score[neighbor]:
-#                 came_from[neighbor] = current_node
-#                 g_score[neighbor] = tentative_g_score
-#                 f_score[neighbor] = tentative_g_score + heuristic(neighbor, end)
-#                 if (f_score[neighbor], neighbor) not in open_set:
-#                     heapq.heappush(open_set, (f_score[neighbor], neighbor))
-
-#     return None, float('inf')
-
 def heuristic_distance(n1, n2):
     try:
         from math import radians
@@ -163,108 +129,161 @@ def heuristic_distance(n1, n2):
     except:
         return 0
 
-# def heuristic_distance(n1, n2):
-#   try:
-#       node1 = G.nodes[n1]
-#       node2 = G.nodes[n2]
-#       if pd.notna(node1['latitude']) and pd.notna(node1['longitude']) and pd.notna(node2['latitude']) and pd.notna(node2['longitude']):
-#           from sklearn.metrics.pairwise import haversine_distances
-#           from math import radians
-#           node1_loc = (radians(node1['latitude']), radians(node1['longitude']))
-#           node2_loc = (radians(node2['latitude']), radians(node2['longitude']))
+def multi_vehicle_routing(graph, vehicle_data, algorithm):
+    routes = {}
+    deliveries = sorted(enumerate(vehicle_data), key=lambda x: x[1]['priority'])  
+    for idx, (vehicle_idx, v) in enumerate(deliveries):
+        if v['weight'] <= v['capacity']:
+            path, cost = (dijkstra(graph, v['start'], v['end']) if algorithm == 'dijkstra'
+                          else a_star(graph, v['start'], v['end'], heuristic_distance))
+            if path:
+                distance = sum(graph[path[j]][path[j+1]].get('distance_km', 0) for j in range(len(path)-1))
+                routes[idx] = {
+                    'vehicle': vehicle_idx, 
+                    'start': v['start'],
+                    'end': v['end'],
+                    'path': path,
+                    'cost': cost,
+                    'distance': distance
+                }
+    return routes
 
-#           return haversine_distances([node1_loc, node2_loc])[0,1] * 6371
-#       else:
-#           return 0
-#   except KeyError:
-#         return 0
-      
-# ===== Streamlit UI =====
+# ===== Streamlit App =====
 st.set_page_config(layout="wide")
 st.title("🚚 Sistem Rute Pengiriman Barang - Tebet, Jakarta Selatan")
 
-# ===== Sidebar Panel =====
 st.sidebar.header("🛠️ Panel Kontrol")
 
-# --- Filter Berdasarkan Nama Lokasi ---
 depot_nodes_df = nodes_df[nodes_df['name'].str.lower().str.contains("depot")]
 ruko_gedung_nodes_df = nodes_df[nodes_df['name'].str.lower().str.contains("ruko|gedung")]
 
-depot_labels = list(depot_nodes_df['name'])
-ruko_gedung_labels = list(ruko_gedung_nodes_df['name'])
+max_vehicles = 15
+num_vehicles = st.sidebar.slider("Jumlah Kendaraan", min_value=1, max_value=max_vehicles, value=1)
 
-start_input = st.sidebar.text_input("Start Nodes (Depot/Gudang, pisahkan dengan koma)", ",".join(depot_labels[:1]))
-start_labels = [s.strip() for s in start_input.split(',') if s.strip() in label_to_id]
-end_labels = st.sidebar.multiselect("End Nodes (Ruko/Gedung)", ruko_gedung_labels, default=ruko_gedung_labels[:1])
+vehicle_data = []
+st.sidebar.subheader("🚗 Detail Kendaraan")
+for i in range(num_vehicles):
+    with st.sidebar.expander(f"Kendaraan {i+1}"):
+        start = st.selectbox(f"Start (Depot) - Kendaraan {i+1}", depot_nodes_df['name'], key=f"start_{i}")
+        end = st.selectbox(f"End (Ruko/Gedung) - Kendaraan {i+1}", ruko_gedung_nodes_df['name'], key=f"end_{i}")
+        weight = st.number_input(f"Berat Pengiriman (Ton) - Kendaraan {i+1}", min_value=0.0, max_value=15.0, value=1.0, step=0.1, key=f"weight_{i}")
+        priority = st.number_input(f"Prioritas - Kendaraan {i+1}", min_value=1, max_value=15, value=1, key=f"priority_{i}")
+        capacity = st.number_input(f"Kapasitas Kendaraan (Ton) - Kendaraan {i+1}", min_value=0.0, max_value=15.0, value=2.0, step=0.1, key=f"capacity_{i}")
+        vehicle_data.append({
+            'start': label_to_id[start],
+            'end': label_to_id[end],
+            'weight': weight,
+            'priority': priority,
+            'capacity': capacity
+        })
 
-priorities = st.sidebar.text_input("Prioritas (dipisah koma)", "1,2")
-demands = st.sidebar.text_input("Berat Pengiriman (Kg) (dipisah koma)", "10,20")
-capacities = st.sidebar.text_input("Kapasitas Kendaraan (Kg) (dipisah koma)", "30,30")
 algorithm = st.sidebar.selectbox("Algoritma", ['dijkstra', 'a_star'])
 
-# --- Konversi Input ---
-priorities = list(map(int, priorities.split(',')))
-demands = list(map(int, demands.split(',')))
-capacities = list(map(int, capacities.split(',')))
-start_nodes = [label_to_id[l] for l in start_labels]
-end_nodes = [label_to_id[l] for l in end_labels]
+show_performance = st.sidebar.checkbox("Visualisasi Performa Komputasi")
+visualization_option = st.sidebar.selectbox("Jenis Visualisasi", ["Peta Folium", "Graph (NetworkX)"])
 
-# ===== Routing =====
-def multi_vehicle_routing(graph, start_nodes, end_nodes, priorities, demands, capacities, algorithm):
-    routes = {}
-    remaining = capacities.copy()
-    deliveries = sorted(zip(start_nodes, end_nodes, priorities, demands), key=lambda x: x[2])
-    for s, e, p, d in deliveries:
-        for i, cap in enumerate(remaining):
-            if d <= cap:
-                path, cost = (dijkstra(graph, s, e) if algorithm == 'dijkstra' else a_star(graph, s, e, heuristic_distance))
-                if path:
-                    distance = sum(graph[path[j]][path[j+1]].get('distance_km', 0) for j in range(len(path)-1))
-                    routes[(s, e)] = {'vehicle': i, 'path': path, 'cost': cost, 'distance': distance}
-                    remaining[i] -= d
-                break
-    return routes
+# ===== Performance Measurement Dinamis =====
+start_time = time.time()
+tracemalloc.start()
 
-routes = multi_vehicle_routing(G, start_nodes, end_nodes, priorities, demands, capacities, algorithm)
+routes = multi_vehicle_routing(G, vehicle_data, algorithm)
 
-# ===== Folium Map =====
-st.subheader("🗺️ Peta Visualisasi Rute")
-m = folium.Map(location=[-6.2297, 106.8532], zoom_start=15)
+current, peak = tracemalloc.get_traced_memory()
+end_time = time.time()
+tracemalloc.stop()
 
-for node in G.nodes:
-    lat, lon = G.nodes[node].get('latitude'), G.nodes[node].get('longitude')
-    label = G.nodes[node].get('label', str(node))
-    if pd.notna(lat) and pd.notna(lon):
-        Marker([lat, lon], tooltip=label, icon=folium.Icon(color="gray", icon="circle")).add_to(m)
+execution_time = (end_time - start_time)
+memory_usage = peak / 10**6
 
-colors = ['red', 'blue', 'green', 'purple', 'orange']
-for idx, ((start, end), route) in enumerate(routes.items()):
-    coords = [[G.nodes[n]['latitude'], G.nodes[n]['longitude']] for n in route['path'] if pd.notna(G.nodes[n]['latitude'])]
-    if coords:
-        folium.PolyLine(coords, color=colors[idx % len(colors)], weight=5,
-                        tooltip=f"Rute Kendaraan {route['vehicle']}").add_to(m)
+# ===== Visualisasi =====
+if visualization_option == "Peta Folium":
+    st.subheader("🗺️ Peta Visualisasi Rute")
+    m = folium.Map(location=[-6.2297, 106.8532], zoom_start=15)
 
-        start_label = id_to_label.get(start, str(start))
-        end_label = id_to_label.get(end, str(end))
+    for node in G.nodes:
+        lat, lon = G.nodes[node].get('latitude'), G.nodes[node].get('longitude')
+        label = G.nodes[node].get('label', str(node))
+        if pd.notna(lat) and pd.notna(lon):
+            Marker([lat, lon], tooltip=label, icon=folium.Icon(color="gray", icon="circle")).add_to(m)
 
-        folium.Marker(coords[0], icon=folium.Icon(color="green"),
-                      tooltip=f"Start ({start_label})").add_to(m)
-        folium.Marker(coords[-1], icon=folium.Icon(color="red"),
-                      tooltip=f"End ({end_label})").add_to(m)
+    colors = ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 'cadetblue', 'darkgreen', 'black', 'pink']
+    for idx, route in routes.items():
+        coords = [[G.nodes[n]['latitude'], G.nodes[n]['longitude']] for n in route['path'] if pd.notna(G.nodes[n]['latitude'])]
+        if coords:
+            folium.PolyLine(coords, color=colors[idx % len(colors)], weight=5,
+                            tooltip=f"Rute Kendaraan {route['vehicle']+1}").add_to(m)
 
-st_data = st_folium(m, width=900, height=500)
+            start_label = id_to_label.get(route['start'], str(route['start']))
+            end_label = id_to_label.get(route['end'], str(route['end']))
 
-# ===== Dashboard =====
-st.subheader("📊 Metrik Performa Rute")
-for (start, end), route in routes.items():
-    s_label = id_to_label[start]
-    e_label = id_to_label[end]
+            folium.Marker(coords[0], icon=folium.Icon(color="green"),
+                          tooltip=f"Start ({start_label})").add_to(m)
+            folium.Marker(coords[-1], icon=folium.Icon(color="red"),
+                          tooltip=f"End ({end_label})").add_to(m)
+
+    st_data = st_folium(m, width=900, height=500)
+
+elif visualization_option == "Graph (NetworkX)":
+    st.subheader("🔗 Visualisasi Graph Jaringan Jalan")
+    fig, ax = plt.subplots(figsize=(14, 10))
+
+    pos = {node: (G.nodes[node]['longitude'], G.nodes[node]['latitude']) for node in G.nodes 
+           if pd.notna(G.nodes[node].get('latitude')) and pd.notna(G.nodes[node].get('longitude'))}
+
+    nx.draw_networkx_nodes(G, pos, node_size=50, node_color='skyblue', ax=ax)
+    nx.draw_networkx_edges(G, pos, width=1, edge_color='lightgray', alpha=0.7, ax=ax)
+
+    # Tambahkan label nama lokasi di setiap node
+    labels = {node: G.nodes[node]['label'] for node in G.nodes if 'label' in G.nodes[node]}
+    nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, ax=ax)
+
+    # Highlight rute kendaraan
+    edge_colors = ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 'cadetblue', 'darkgreen', 'black', 'pink']
+    for idx, route in routes.items():
+        path_edges = list(zip(route['path'][:-1], route['path'][1:]))
+        nx.draw_networkx_edges(G, pos, edgelist=path_edges, width=3, edge_color=edge_colors[idx % len(edge_colors)], ax=ax)
+
+    plt.title("Graph Transportation Network")
+    plt.axis('off')
+    st.pyplot(fig)
+
+
+# ===== Dashboard Performa & Biaya =====
+st.subheader("📊 Metrik Performa & Biaya Pengiriman")
+for idx, (key, route) in enumerate(routes.items(), start=1):
+    s_label = id_to_label.get(route['start'], str(route['start']))
+    e_label = id_to_label.get(route['end'], str(route['end']))
     path_labels = [id_to_label.get(n, str(n)) for n in route['path']]
-
     route_str = " ➔ ".join(path_labels)
 
-    st.markdown(f"**🚗 [Kendaraan {route['vehicle']}] Rute dari '{s_label}' ke '{e_label}':**")
+    st.markdown(f"**[Urutan ke-{idx}] - Kendaraan {route['vehicle']+1} rute dari '{s_label}' ke '{e_label}':**")
     st.write(route_str)
     st.write(f"• Total Jarak: **{route['distance']:.2f} km**")
-    st.write(f"• Total Waktu (estimasi): **{route['cost']:.2f} jam**")
+    st.write(f"• Total Waktu (estimasi): **{route['cost'] * 60:.0f} menit**")
 
+    biaya_per_km = 5000  # Rp per km
+    total_biaya = route['distance'] * biaya_per_km
+
+    st.write(f"• Total Biaya Pengiriman: **Rp {total_biaya:,.0f}**")
+
+# ===== Grafik Analisis Kinerja =====
+if show_performance:
+    st.subheader(f"⏱️ Analisis Kinerja Algoritma: {algorithm.upper()}")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric(label="Waktu Komputasi", value=f"{execution_time:.4f} detik")
+
+    with col2:
+        st.metric(label="Penggunaan Memori", value=f"{memory_usage:.4f} MB")
+
+    fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+
+    ax[0].bar(['Waktu Komputasi'], [execution_time], color='skyblue')
+    ax[0].set_title('Waktu Komputasi (detik)')
+    ax[0].set_ylabel('Detik')
+
+    ax[1].bar(['Penggunaan Memori'], [memory_usage], color='lightgreen')
+    ax[1].set_title('Penggunaan Memori (MB)')
+    ax[1].set_ylabel('MB')
