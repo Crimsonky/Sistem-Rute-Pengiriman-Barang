@@ -18,7 +18,7 @@ Proyek ini adalah aplikasi berbasis
 
 1. **Clone repository ini**:
    ```bash
-   git clone https://github.com/username/Sistem-Rute-Pengiriman-Barang.git
+   git clone https://github.com/Crimsonky/Sistem-Rute-Pengiriman-Barang.git
    cd Sistem-Rute-Pengiriman-Barang
    ```
 
