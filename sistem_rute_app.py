@@ -381,66 +381,48 @@ elif visualization_option == "Graph (NetworkX)":
 
 
 # ===== Dashboard Performa & Biaya =====
-st.subheader("📊 Metrik Performa & Biaya Pengiriman")
+st.subheader("📊 Ringkasan Rute & Biaya per Kendaraan")
+
 for idx, (key, route) in enumerate(routes.items(), start=1):
     s_label = id_to_label.get(route['start'], str(route['start']))
     e_label = id_to_label.get(route['end'], str(route['end']))
     path_labels = [id_to_label.get(n, str(n)) for n in route['path']]
     route_str = " ➔ ".join(path_labels)
 
-    st.markdown(f"**[Urutan ke-{idx}] - Kendaraan {route['vehicle']+1} rute dari '{s_label}':**")
-    
-    # Display weight information
-    st.write(f"• Berat Muatan: **{route['weight']:.2f} ton** (Kapasitas: {route['capacity']:.2f} ton)")
-    
-    # Display weight distribution
-    st.write("• Detail muatan:")
-    
-    # Get all destinations for this vehicle
-    destinations = []
-    
-    # If the vehicle has weight_distribution details
-    if 'weight_distribution' in route and 'weights' in route['weight_distribution']:
-        # Use the detailed distribution
-        for dest, weight in route['weight_distribution']['weights'].items():
-            dest_label = id_to_label.get(dest, str(dest))
-            st.write(f"  * Ke {dest_label}: **{weight:.2f} ton**")
-    else:
-        # If explicit distribution is not available, calculate based on stops
-        all_destinations = []
-        if 'stops' in route and route['stops']:
-            all_destinations.extend(route['stops'])
-        all_destinations.append(route['end'])
+    st.markdown(f"### 🚚 Kendaraan {route['vehicle']+1} - Rute #{idx}")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write(f"**📍 Asal:** {s_label}")
+        st.write(f"**🎯 Tujuan Akhir:** {e_label}")
         
-        # If we have multiple destinations, distribute the weight
-        if len(all_destinations) > 1:
-            # For vehicles with multiple stops, distribute weight evenly
-            # This is a simplification - in a real system, you might want to
-            # track the exact weight going to each destination
-            weight_per_dest = route['weight'] / len(all_destinations)
-            for dest in all_destinations:
+        if 'stops' in route and route['stops']:
+            stops_str = ", ".join([id_to_label.get(stop, str(stop)) for stop in route['stops']])
+            st.write(f"**🛑 Pemberhentian Tambahan:** {stops_str}")
+        
+        st.write(f"**🚛 Berat Muatan:** {route['weight']:.2f} ton / {route['capacity']:.2f} ton")
+
+        st.write("**📦 Distribusi Muatan:**")
+        if 'weight_distribution' in route and 'weights' in route['weight_distribution']:
+            for dest, w in route['weight_distribution']['weights'].items():
                 dest_label = id_to_label.get(dest, str(dest))
-                st.write(f"  * Ke {dest_label}: **{weight_per_dest:.2f} ton**")
+                st.markdown(f"- {dest_label}: **{w:.2f} ton**")
         else:
-            # Single destination
-            st.write(f"  * Ke {e_label}: **{route['weight']:.2f} ton**")
-    
-    # Display additional stops if any
-    if 'stops' in route and route['stops']:
-        stops_str = ", ".join([id_to_label.get(stop, str(stop)) for stop in route['stops']])
-        st.write(f"• Pemberhentian tambahan: **{stops_str}**")
-        st.write(f"• Tujuan akhir: **{e_label}**")
-    else:
-        st.write(f"• Tujuan: **{e_label}**")
-    
-    st.write(f"• Rute lengkap: {route_str}")
-    st.write(f"• Total Jarak: **{route['distance']:.2f} km**")
-    st.write(f"• Total Waktu (estimasi): **{route['cost'] * 60:.0f} menit**")
+            st.markdown(f"- {e_label}: **{route['weight']:.2f} ton**")
 
-    biaya_per_km = 5000  # Rp per km
-    total_biaya = route['distance'] * biaya_per_km
+    with col2:
+        st.write("**🛣️ Rute Lengkap:**")
+        st.markdown(route_str)
 
-    st.write(f"• Total Biaya Pengiriman: **Rp {total_biaya:,.0f}**")
+        st.write(f"**📏 Total Jarak:** {route['distance']:.2f} km")
+        st.write(f"**⏱️ Estimasi Waktu:** {route['cost'] * 60:.0f} menit")
+        
+        biaya_per_km = 5000  # Rp per km
+        total_biaya = route['distance'] * biaya_per_km
+        st.write(f"**💸 Estimasi Biaya:** Rp {total_biaya:,.0f}")
+
+    st.markdown("---")
 
 # ===== Grafik Analisis Kinerja =====
 if show_performance:
