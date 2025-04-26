@@ -29,7 +29,8 @@ Proyek ini adalah aplikasi berbasis
 
 3. **Jalankan aplikasi Streamlit**:
    ```bash
-   streamlit run sistem_rute_app.py.py
+   streamlit run sistem_rute_app.py
+   
    ```
 
 4. **Akses aplikasi** melalui browser di alamat:
