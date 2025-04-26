@@ -287,3 +287,4 @@ if show_performance:
     ax[1].bar(['Penggunaan Memori'], [memory_usage], color='lightgreen')
     ax[1].set_title('Penggunaan Memori (MB)')
     ax[1].set_ylabel('MB')
+    st.pyplot(fig)
