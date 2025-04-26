@@ -18,8 +18,8 @@ Proyek ini adalah aplikasi berbasis
 
 1. **Clone repository ini**:
    ```bash
-   git clone https://github.com/username/repository-name.git
-   cd repository-name
+   git clone https://github.com/username/Sistem-Rute-Pengiriman-Barang.git
+   cd Sistem-Rute-Pengiriman-Barang
    ```
 
 2. **Install dependencies**:
