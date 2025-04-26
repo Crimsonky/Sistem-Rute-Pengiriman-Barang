@@ -38,6 +38,10 @@ Proyek ini adalah aplikasi berbasis
    http://localhost:8501
    ```
 
+## 🌐 Link Aplikasi Streamlit untuk Pengujian
+- [Klik di sini untuk mengakses aplikasi Streamlit yang sudah berjalan](https://sistem-rute-kelompok-5.streamlit.app/)
+
+
 ## 🛠️ Struktur File
 ```
 .
