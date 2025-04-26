@@ -45,7 +45,7 @@ Proyek ini adalah aplikasi berbasis
 ## 🛠️ Struktur File
 ```
 .
-├── sistem_rute_app.py.py
+├── sistem_rute_app.py
 ├── transportation_nodes.csv
 ├── transportation_edges_augmented.csv
 ├── requirements.txt
