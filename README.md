@@ -60,7 +60,7 @@ Proyek ini adalah aplikasi berbasis
 - `streamlit-folium`
 - `scikit-learn`
 
-## 🧑‍💻 Kontributor
+## 🧑‍💻 Kontributor Kelompok 5
 - Ryan Delon Pratama
 - Ferry Saputra
 - Rafael Aryapati Soebagijo
