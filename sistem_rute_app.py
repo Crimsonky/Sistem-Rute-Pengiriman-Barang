@@ -131,21 +131,142 @@ def heuristic_distance(n1, n2):
 
 def multi_vehicle_routing(graph, vehicle_data, algorithm):
     routes = {}
-    deliveries = sorted(enumerate(vehicle_data), key=lambda x: x[1]['priority'])  
-    for idx, (vehicle_idx, v) in enumerate(deliveries):
-        if v['weight'] <= v['capacity']:
-            path, cost = (dijkstra(graph, v['start'], v['end']) if algorithm == 'dijkstra'
-                          else a_star(graph, v['start'], v['end'], heuristic_distance))
-            if path:
-                distance = sum(graph[path[j]][path[j+1]].get('distance_km', 0) for j in range(len(path)-1))
+    # Copy vehicle data to avoid modifying the original
+    vehicles = [v.copy() for v in vehicle_data]
+    
+    # Sort by priority
+    vehicles_with_idx = sorted(enumerate(vehicles), key=lambda x: x[1]['priority'])
+    
+    # Track how much weight each vehicle carries for each destination
+    weight_distribution = {}
+    
+    # Initialize weight distribution for each vehicle
+    for vehicle_idx, v in vehicles_with_idx:
+        weight_distribution[vehicle_idx] = {
+            'main_destination': v['end'],
+            'weights': {v['end']: v['weight']}  # Initially all weight goes to main destination
+        }
+    
+    # Process vehicles with overloaded cargo
+    for vehicle_idx, v in vehicles_with_idx:
+        if v['weight'] > v['capacity']:
+            # Calculate excess weight
+            excess_weight = v['weight'] - v['capacity']
+            
+            # Original weight distribution for this vehicle's destinations
+            orig_distribution = weight_distribution[vehicle_idx]['weights'].copy()
+            total_orig_weight = sum(orig_distribution.values())
+            
+            # Scale down weights to match capacity
+            for dest in orig_distribution:
+                orig_distribution[dest] = (orig_distribution[dest] / total_orig_weight) * v['capacity']
+            
+            # Update the weight distribution for this vehicle
+            weight_distribution[vehicle_idx]['weights'] = orig_distribution
+            v['weight'] = v['capacity']  # Reduce to capacity
+            
+            # Try to assign excess weight to other vehicles from same depot
+            for other_idx, other_v in vehicles_with_idx:
+                if other_idx != vehicle_idx and other_v['start'] == v['start']:
+                    available_capacity = other_v['capacity'] - other_v['weight']
+                    
+                    if available_capacity > 0:
+                        # Calculate how much we can transfer to this vehicle
+                        transfer_amount = min(excess_weight, available_capacity)
+                        excess_weight -= transfer_amount
+                        other_v['weight'] += transfer_amount
+                        
+                        # Add the first vehicle's destination to this vehicle's route
+                        if 'additional_stops' not in other_v:
+                            other_v['additional_stops'] = []
+                        if v['end'] not in other_v['additional_stops'] and v['end'] != other_v['end']:
+                            other_v['additional_stops'].append(v['end'])
+                        
+                        # Update weight distribution for other vehicle
+                        if other_idx not in weight_distribution:
+                            weight_distribution[other_idx] = {
+                                'main_destination': other_v['end'],
+                                'weights': {other_v['end']: other_v['weight']}
+                            }
+                        
+                        # Add transferred weight to the destination
+                        if v['end'] in weight_distribution[other_idx]['weights']:
+                            weight_distribution[other_idx]['weights'][v['end']] += transfer_amount
+                        else:
+                            weight_distribution[other_idx]['weights'][v['end']] = transfer_amount
+                        
+                        if excess_weight <= 0:
+                            break
+    
+    # Now calculate routes for all vehicles
+    for idx, (vehicle_idx, v) in enumerate(vehicles_with_idx):
+        if v['weight'] <= v['capacity']:  # Should always be true now
+            # If the vehicle has additional stops, calculate multi-stop route
+            if 'additional_stops' in v and v['additional_stops']:
+                # Calculate route through all stops
+                full_path = []
+                full_cost = 0
+                full_distance = 0
+                current_point = v['start']
+                
+                # First visit all additional stops
+                for stop in v['additional_stops']:
+                    path, cost = (dijkstra(graph, current_point, stop) if algorithm == 'dijkstra'
+                                else a_star(graph, current_point, stop, heuristic_distance))
+                    
+                    if path:
+                        # Add path (excluding the starting point if not the first segment)
+                        if full_path:
+                            full_path.extend(path[1:])  # Skip first node to avoid duplication
+                        else:
+                            full_path.extend(path)
+                            
+                        full_cost += cost
+                        segment_distance = sum(graph[path[j]][path[j+1]].get('distance_km', 0) for j in range(len(path)-1))
+                        full_distance += segment_distance
+                        current_point = stop
+                
+                # Finally go to the final destination
+                path, cost = (dijkstra(graph, current_point, v['end']) if algorithm == 'dijkstra'
+                            else a_star(graph, current_point, v['end'], heuristic_distance))
+                
+                if path and path[1:]:  # Skip first node to avoid duplication
+                    full_path.extend(path[1:])
+                    full_cost += cost
+                    segment_distance = sum(graph[path[j]][path[j+1]].get('distance_km', 0) for j in range(len(path)-1))
+                    full_distance += segment_distance
+                
                 routes[idx] = {
-                    'vehicle': vehicle_idx, 
+                    'vehicle': vehicle_idx,
                     'start': v['start'],
                     'end': v['end'],
-                    'path': path,
-                    'cost': cost,
-                    'distance': distance
+                    'stops': v.get('additional_stops', []),
+                    'path': full_path,
+                    'cost': full_cost,
+                    'distance': full_distance,
+                    'weight': v['weight'],
+                    'capacity': v['capacity'],
+                    'weight_distribution': weight_distribution.get(vehicle_idx, {})
                 }
+            else:
+                # Regular single-destination routing
+                path, cost = (dijkstra(graph, v['start'], v['end']) if algorithm == 'dijkstra'
+                            else a_star(graph, v['start'], v['end'], heuristic_distance))
+                
+                if path:
+                    distance = sum(graph[path[j]][path[j+1]].get('distance_km', 0) for j in range(len(path)-1))
+                    routes[idx] = {
+                        'vehicle': vehicle_idx,
+                        'start': v['start'],
+                        'end': v['end'],
+                        'path': path,
+                        'cost': cost,
+                        'distance': distance,
+                        'weight': v['weight'],
+                        'capacity': v['capacity'],
+                        'weight_distribution': weight_distribution.get(vehicle_idx, {})
+                    }
+    
     return routes
 
 # ===== Streamlit App =====
@@ -195,7 +316,7 @@ tracemalloc.stop()
 execution_time = (end_time - start_time)
 memory_usage = peak / 10**6
 
-# ===== Visualisasi =====
+
 if visualization_option == "Peta Folium":
     st.subheader("🗺️ Peta Visualisasi Rute")
     m = folium.Map(location=[-6.2297, 106.8532], zoom_start=15)
@@ -217,9 +338,20 @@ if visualization_option == "Peta Folium":
             end_label = id_to_label.get(route['end'], str(route['end']))
 
             folium.Marker(coords[0], icon=folium.Icon(color="green"),
-                          tooltip=f"Start ({start_label})").add_to(m)
+                         tooltip=f"Start ({start_label})").add_to(m)
             folium.Marker(coords[-1], icon=folium.Icon(color="red"),
-                          tooltip=f"End ({end_label})").add_to(m)
+                         tooltip=f"End ({end_label})").add_to(m)
+            
+            # Mark additional stops
+            if 'stops' in route and route['stops']:
+                for stop in route['stops']:
+                    stop_lat = G.nodes[stop]['latitude']
+                    stop_lon = G.nodes[stop]['longitude']
+                    stop_label = id_to_label.get(stop, str(stop))
+                    if pd.notna(stop_lat) and pd.notna(stop_lon):
+                        folium.Marker([stop_lat, stop_lon], 
+                                     icon=folium.Icon(color="orange", icon="flag"),
+                                     tooltip=f"Stop ({stop_label})").add_to(m)
 
     st_data = st_folium(m, width=900, height=500)
 
@@ -256,8 +388,52 @@ for idx, (key, route) in enumerate(routes.items(), start=1):
     path_labels = [id_to_label.get(n, str(n)) for n in route['path']]
     route_str = " ➔ ".join(path_labels)
 
-    st.markdown(f"**[Urutan ke-{idx}] - Kendaraan {route['vehicle']+1} rute dari '{s_label}' ke '{e_label}':**")
-    st.write(route_str)
+    st.markdown(f"**[Urutan ke-{idx}] - Kendaraan {route['vehicle']+1} rute dari '{s_label}':**")
+    
+    # Display weight information
+    st.write(f"• Berat Muatan: **{route['weight']:.2f} ton** (Kapasitas: {route['capacity']:.2f} ton)")
+    
+    # Display weight distribution
+    st.write("• Detail muatan:")
+    
+    # Get all destinations for this vehicle
+    destinations = []
+    
+    # If the vehicle has weight_distribution details
+    if 'weight_distribution' in route and 'weights' in route['weight_distribution']:
+        # Use the detailed distribution
+        for dest, weight in route['weight_distribution']['weights'].items():
+            dest_label = id_to_label.get(dest, str(dest))
+            st.write(f"  * Ke {dest_label}: **{weight:.2f} ton**")
+    else:
+        # If explicit distribution is not available, calculate based on stops
+        all_destinations = []
+        if 'stops' in route and route['stops']:
+            all_destinations.extend(route['stops'])
+        all_destinations.append(route['end'])
+        
+        # If we have multiple destinations, distribute the weight
+        if len(all_destinations) > 1:
+            # For vehicles with multiple stops, distribute weight evenly
+            # This is a simplification - in a real system, you might want to
+            # track the exact weight going to each destination
+            weight_per_dest = route['weight'] / len(all_destinations)
+            for dest in all_destinations:
+                dest_label = id_to_label.get(dest, str(dest))
+                st.write(f"  * Ke {dest_label}: **{weight_per_dest:.2f} ton**")
+        else:
+            # Single destination
+            st.write(f"  * Ke {e_label}: **{route['weight']:.2f} ton**")
+    
+    # Display additional stops if any
+    if 'stops' in route and route['stops']:
+        stops_str = ", ".join([id_to_label.get(stop, str(stop)) for stop in route['stops']])
+        st.write(f"• Pemberhentian tambahan: **{stops_str}**")
+        st.write(f"• Tujuan akhir: **{e_label}**")
+    else:
+        st.write(f"• Tujuan: **{e_label}**")
+    
+    st.write(f"• Rute lengkap: {route_str}")
     st.write(f"• Total Jarak: **{route['distance']:.2f} km**")
     st.write(f"• Total Waktu (estimasi): **{route['cost'] * 60:.0f} menit**")
 
