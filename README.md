@@ -1,13 +1,14 @@
 # 🚚 Sistem Optimasi Rute Pengiriman Barang - Tebet, Jakarta Selatan
 
-Proyek ini adalah aplikasi berbasis **Streamlit** yang memvisualisasikan rute pengiriman barang di wilayah **Tebet, Jakarta Selatan** menggunakan algoritma **Dijkstra** dan **A\***. Aplikasi ini mengoptimasi pengiriman dari depot ke ruko/gedung berdasarkan prioritas, kapasitas kendaraan, dan permintaan pengiriman.
+Proyek ini adalah aplikasi berbasis 
+**Streamlit** yang memvisualisasikan rute pengiriman barang di wilayah **Tebet, Jakarta Selatan** menggunakan algoritma **Dijkstra** dan **A\***. Aplikasi ini mengoptimasi pengiriman dari depot ke ruko/gedung berdasarkan prioritas, kapasitas kendaraan, dan permintaan pengiriman.
 
 ## 🔥 Fitur
 - **Pemilihan Lokasi Awal dan Tujuan**: Pilih titik awal (Depot) dan tujuan (Ruko/Gedung) secara fleksibel.
-- **Dukungan Multi-Kendaraan**: Optimasi pengiriman dengan beberapa kendaraan berdasarkan kapasitas.
+- **Dukungan Multi-Vehicle**: Optimasi pengiriman dengan beberapa kendaraan berdasarkan kapasitas.
 - **Pemilihan Algoritma**: Bebas memilih antara algoritma **Dijkstra** atau **A\***.
 - **Visualisasi Interaktif**: Peta Folium yang menampilkan jalur pengiriman secara real-time.
-- **Pengaturan Prioritas dan Permintaan**: Tentukan prioritas dan berat permintaan setiap pengiriman.
+- **Pengaturan Prioritized Delivery**: Menentukan prioritas dari setiap pengiriman.
 
 ## 📦 Dataset
 - `transportation_nodes.csv`: Berisi data titik lokasi (Depot, Ruko, Gedung) dengan atribut seperti latitude dan longitude.
@@ -28,7 +29,7 @@ Proyek ini adalah aplikasi berbasis **Streamlit** yang memvisualisasikan rute pe
 
 3. **Jalankan aplikasi Streamlit**:
    ```bash
-   streamlit run app.py
+   streamlit run sistem_rute_app.py.py
    ```
 
 4. **Akses aplikasi** melalui browser di alamat:
@@ -39,7 +40,7 @@ Proyek ini adalah aplikasi berbasis **Streamlit** yang memvisualisasikan rute pe
 ## 🛠️ Struktur File
 ```
 .
-├── app.py
+├── sistem_rute_app.py.py
 ├── transportation_nodes.csv
 ├── transportation_edges_augmented.csv
 ├── requirements.txt
@@ -52,12 +53,11 @@ Proyek ini adalah aplikasi berbasis **Streamlit** yang memvisualisasikan rute pe
 - `networkx`
 - `folium`
 - `streamlit-folium`
-- `scikit-learn` (untuk perhitungan jarak Haversine di A*)
+- `scikit-learn`
 
 ## ✨ Rencana Pengembangan
-- Menambahkan dukungan **optimasi rute multiple drops** (banyak tujuan dalam 1 kendaraan).
 - Integrasi **penjadwalan waktu** berdasarkan jam operasional.
-- Visualisasi tambahan seperti **animasi perjalanan**.
+- Visualisasi Rute.
 
 ## 🧑‍💻 Kontributor
 - Ryan Delon Pratama
