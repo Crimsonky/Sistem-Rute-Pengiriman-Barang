@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 # ===== Load Data =====
 nodes_df = pd.read_csv('transportation_nodes.csv')
-edges_df = pd.read_csv('transportation_edges_updated.csv')
+edges_df = pd.read_csv('transportation_edges_augmented.csv')
 
 G = nx.DiGraph()
 id_to_label = {}
