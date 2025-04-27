@@ -131,65 +131,51 @@ def heuristic_distance(n1, n2):
 
 def multi_vehicle_routing(graph, vehicle_data, algorithm):
     routes = {}
-    # Copy vehicle data to avoid modifying the original
     vehicles = [v.copy() for v in vehicle_data]
     
-    # Sort by priority
     vehicles_with_idx = sorted(enumerate(vehicles), key=lambda x: x[1]['priority'])
     
-    # Track how much weight each vehicle carries for each destination
     weight_distribution = {}
     
-    # Initialize weight distribution for each vehicle
     for vehicle_idx, v in vehicles_with_idx:
         weight_distribution[vehicle_idx] = {
             'main_destination': v['end'],
-            'weights': {v['end']: v['weight']}  # Initially all weight goes to main destination
+            'weights': {v['end']: v['weight']}  
         }
     
-    # Process vehicles with overloaded cargo
     for vehicle_idx, v in vehicles_with_idx:
         if v['weight'] > v['capacity']:
-            # Calculate excess weight
             excess_weight = v['weight'] - v['capacity']
             
-            # Original weight distribution for this vehicle's destinations
             orig_distribution = weight_distribution[vehicle_idx]['weights'].copy()
             total_orig_weight = sum(orig_distribution.values())
             
-            # Scale down weights to match capacity
             for dest in orig_distribution:
                 orig_distribution[dest] = (orig_distribution[dest] / total_orig_weight) * v['capacity']
             
-            # Update the weight distribution for this vehicle
             weight_distribution[vehicle_idx]['weights'] = orig_distribution
-            v['weight'] = v['capacity']  # Reduce to capacity
+            v['weight'] = v['capacity']  
             
-            # Try to assign excess weight to other vehicles from same depot
             for other_idx, other_v in vehicles_with_idx:
                 if other_idx != vehicle_idx and other_v['start'] == v['start']:
                     available_capacity = other_v['capacity'] - other_v['weight']
                     
                     if available_capacity > 0:  
-                        # Calculate how much we can transfer to this vehicle
                         transfer_amount = min(excess_weight, available_capacity)
                         excess_weight -= transfer_amount
                         other_v['weight'] += transfer_amount
                         
-                        # Add the first vehicle's destination to this vehicle's route
                         if 'additional_stops' not in other_v:
                             other_v['additional_stops'] = []
                         if v['end'] not in other_v['additional_stops'] and v['end'] != other_v['end']:
                             other_v['additional_stops'].append(v['end'])
                         
-                        # Update weight distribution for other vehicle
                         if other_idx not in weight_distribution:
                             weight_distribution[other_idx] = {
                                 'main_destination': other_v['end'],
                                 'weights': {other_v['end']: other_v['weight']}
                             }
                         
-                        # Add transferred weight to the destination
                         if v['end'] in weight_distribution[other_idx]['weights']:
                             weight_distribution[other_idx]['weights'][v['end']] += transfer_amount
                         else:
@@ -198,26 +184,21 @@ def multi_vehicle_routing(graph, vehicle_data, algorithm):
                         if excess_weight <= 0:
                             break
     
-    # Now calculate routes for all vehicles
     for idx, (vehicle_idx, v) in enumerate(vehicles_with_idx):
-        if v['weight'] <= v['capacity']:  # Should always be true now
-            # If the vehicle has additional stops, calculate multi-stop route
+        if v['weight'] <= v['capacity']:  
             if 'additional_stops' in v and v['additional_stops']:
-                # Calculate route through all stops
                 full_path = []  
                 full_cost = 0
                 full_distance = 0
                 current_point = v['start']
                 
-                # First visit all additional stops
                 for stop in v['additional_stops']:
                     path, cost = (dijkstra(graph, current_point, stop) if algorithm == 'dijkstra'
                                 else a_star(graph, current_point, stop, heuristic_distance))
                     
                     if path:
-                        # Add path (excluding the starting point if not the first segment)
                         if full_path:
-                            full_path.extend(path[1:])  # Skip first node to avoid duplication
+                            full_path.extend(path[1:]) 
                         else:
                             full_path.extend(path)
                             
@@ -226,11 +207,10 @@ def multi_vehicle_routing(graph, vehicle_data, algorithm):
                         full_distance += segment_distance
                         current_point = stop
                 
-                # Finally go to the final destination
                 path, cost = (dijkstra(graph, current_point, v['end']) if algorithm == 'dijkstra'
                             else a_star(graph, current_point, v['end'], heuristic_distance))
                 
-                if path and path[1:]:  # Skip first node to avoid duplication
+                if path and path[1:]: 
                     full_path.extend(path[1:])
                     full_cost += cost
                     segment_distance = sum(graph[path[j]][path[j+1]].get('distance_km', 0) for j in range(len(path)-1))
@@ -249,7 +229,6 @@ def multi_vehicle_routing(graph, vehicle_data, algorithm):
                     'weight_distribution': weight_distribution.get(vehicle_idx, {})
                 }
             else:
-                # Regular single-destination routing
                 path, cost = (dijkstra(graph, v['start'], v['end']) if algorithm == 'dijkstra'
                             else a_star(graph, v['start'], v['end'], heuristic_distance))
                 
@@ -342,7 +321,6 @@ if visualization_option == "Peta Folium":
             folium.Marker(coords[-1], icon=folium.Icon(color="red"),
                          tooltip=f"End ({end_label})").add_to(m)
             
-            # Mark additional stops
             if 'stops' in route and route['stops']:
                 for stop in route['stops']:
                     stop_lat = G.nodes[stop]['latitude']
@@ -365,11 +343,9 @@ elif visualization_option == "Graph (NetworkX)":
     nx.draw_networkx_nodes(G, pos, node_size=50, node_color='skyblue', ax=ax)
     nx.draw_networkx_edges(G, pos, width=1, edge_color='lightgray', alpha=0.7, ax=ax)
 
-    # Tambahkan label nama lokasi di setiap node
     labels = {node: G.nodes[node]['label'] for node in G.nodes if 'label' in G.nodes[node]}
     nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, ax=ax)
 
-    # Highlight rute kendaraan
     edge_colors = ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 'cadetblue', 'darkgreen', 'black', 'pink']
     for idx, route in routes.items():
         path_edges = list(zip(route['path'][:-1], route['path'][1:]))
