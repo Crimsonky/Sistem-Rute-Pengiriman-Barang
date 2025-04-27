@@ -170,7 +170,7 @@ def multi_vehicle_routing(graph, vehicle_data, algorithm):
                 if other_idx != vehicle_idx and other_v['start'] == v['start']:
                     available_capacity = other_v['capacity'] - other_v['weight']
                     
-                    if available_capacity > 0:
+                    if available_capacity > 0:  
                         # Calculate how much we can transfer to this vehicle
                         transfer_amount = min(excess_weight, available_capacity)
                         excess_weight -= transfer_amount
@@ -204,7 +204,7 @@ def multi_vehicle_routing(graph, vehicle_data, algorithm):
             # If the vehicle has additional stops, calculate multi-stop route
             if 'additional_stops' in v and v['additional_stops']:
                 # Calculate route through all stops
-                full_path = []
+                full_path = []  
                 full_cost = 0
                 full_distance = 0
                 current_point = v['start']
